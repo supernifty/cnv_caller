@@ -7,6 +7,7 @@ import argparse
 import logging
 import math
 import sys
+import version
 
 import pysam
 
@@ -53,7 +54,9 @@ def main(tumour, normal, bed, minlen):
   start = {'type': None, 'chrom': None, 'pos': None}
   for result in regions:
     if result['tumour'] == 0:
-      sys.stdout.write('{}\t{}\t{}\t{}\t{}\t{:.2f}\t{}\n'.format(result['chrom'], result['start'], result['finish'], result['tumour'], result['normal'], ratio, '-2'))
+      sys.stdout.write('{}\t{}\t{}\t{}\t{}\t{:.2f}\t{}\n'.format(result['chrom'], result['start'], result['finish'], result['tumour'], result['normal'], -999, '-2'))
+    elif result['normal'] == 0:
+      sys.stdout.write('{}\t{}\t{}\t{}\t{}\t{:.2f}\t{}\n'.format(result['chrom'], result['start'], result['finish'], result['tumour'], result['normal'], 999, '+2'))
     else:
       ratio = math.log(result['tumour'] / result['normal'] / total_ratio, 2)
       if ratio > 0.8:

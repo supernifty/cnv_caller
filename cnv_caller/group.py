@@ -36,8 +36,8 @@ LABELS = [
 
 import version
 
-def add_cnv(out, current, calls, counts, minlen, minbases, mincount):
-  if current['status'] != None and current['status'] != '0' and current['finish'] - current['start'] >= minlen and current['bases'] >= minbases and current['count'] >= mincount:
+def add_cnv(out, current, calls, counts, minlen, minbases, mincount, mindp):
+  if current['status'] != None and current['status'] != '0' and current['finish'] - current['start'] >= minlen and current['bases'] >= minbases and current['count'] >= mincount and current['normal'] / current['bases'] > mindp:
     sys.stdout.write('{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(current['chrom'], current['start'], current['finish'], current['count'], current['bases'], current['finish'] - current['start'], current['status']))
     calls.append({'start': current['start'], 'finish': current['finish'], 'status': current['status']})
     counts[current['status']] += current['finish'] - current['start']
@@ -61,28 +61,29 @@ def plot_chrom(plot, chrom, regions, xs, ys):
   plt.close()
   logging.info('plotted %s', filename)
 
-def main(fh, minlen, minbases, mincount, plot):
+def main(fh, minlen, minbases, mincount, mindp, plot):
   logging.info('reading from stdin...')
-  current = {'start': None, 'finish': None, 'chrom': None, 'status': None, 'bases': 0, 'count': 0}
+  current = {'start': None, 'finish': None, 'chrom': None, 'status': None, 'bases': 0, 'count': 0, 'normal': 0}
   counts = collections.defaultdict(int)
 
-  # chrom start finish tumour normal ratio outcome
   xs = collections.defaultdict(list)
   ys = collections.defaultdict(list)
   regions = []
   last_chrom = None
 
   sys.stdout.write('chrom\tstart\tfinish\tsegments\tbases\tlength\tstatus\n')
+  # chrom start finish tumour normal ratio outcome
   for row in csv.DictReader(fh, delimiter='\t'):
     row['start'] = int(row['start'])
     row['finish'] = int(row['finish'])
     counts['considered'] += row['finish'] - row['start']
     if row['outcome'] != current['status'] or row['chrom'] != current['chrom']: # new status
-      add_cnv(sys.stdout, current, regions, counts, minlen, minbases, mincount)
-      current = {'chrom': row['chrom'], 'start': row['start'], 'finish': row['finish'], 'status': row['outcome'], 'count': 1, 'bases': row['finish'] - row['start']}
+      add_cnv(sys.stdout, current, regions, counts, minlen, minbases, mincount, mindp)
+      current = {'chrom': row['chrom'], 'start': row['start'], 'finish': row['finish'], 'status': row['outcome'], 'count': 1, 'bases': row['finish'] - row['start'], 'normal': int(row['normal'])}
     else: # same status
       current['finish'] = row['finish'] 
       current['count'] += 1
+      current['normal'] += int(row['normal'])
       current['bases'] += row['finish'] - row['start']
 
     if plot is not None and last_chrom is not None and row['chrom'] != last_chrom:
@@ -97,7 +98,7 @@ def main(fh, minlen, minbases, mincount, plot):
     last_chrom = row['chrom']
 
   # check the last one
-  add_cnv(sys.stdout, current, regions, counts, minlen, minbases, mincount)
+  add_cnv(sys.stdout, current, regions, counts, minlen, minbases, mincount, mindp)
   if plot is not None:
     plot_chrom(plot, last_chrom, regions, xs, ys)
       
@@ -108,7 +109,8 @@ if __name__ == '__main__':
   parser.add_argument('--version', action='version', version=version.PROGRAM_VERSION)
   parser.add_argument('--minlen', required=False, default=1000, help='min length of abnormal CNV')
   parser.add_argument('--minbases', required=False, default=1000, help='min bases considered of abnormal CNV')
-  parser.add_argument('--mincount', required=False, default=3, help='min bases considered of abnormal CNV')
+  parser.add_argument('--mincount', required=False, default=3, help='min segments of abnormal CNV')
+  parser.add_argument('--mindp', required=False, default=10, help='min depth of normal')
   parser.add_argument('--plot', required=False, help='prefix for plots')
   parser.add_argument('--verbose', action='store_true', help='more logging')
   args = parser.parse_args()
@@ -117,5 +119,5 @@ if __name__ == '__main__':
   else:
     logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s', level=logging.INFO)
 
-  main(sys.stdin, args.minlen, args.minbases, args.mincount, args.plot)
+  main(sys.stdin, args.minlen, args.minbases, args.mincount, args.mindp, args.plot)
 

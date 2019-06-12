@@ -46,10 +46,10 @@ def plot_chrom(plot, chrom, regions, xs, ys):
   filename = '{}.{}.png'.format(plot, chrom)
   plt.figure(figsize=(WIDTH, HEIGHT))
   for key in xs.keys():
-    plt.scatter(xs[key], ys[key], color=COLOURS[key], alpha=0.5)
+    plt.scatter(xs[key], ys[key], color=COLOURS[key], alpha=0.4, s=4)
   plt.title('CNVs for chromosome {}'.format(chrom))
   for call in regions:
-    plt.axvspan(call['start'], call['finish'], facecolor=COLOURS[call['status']], alpha=0.2)
+    plt.axvspan(call['start'], call['finish'], facecolor=COLOURS[call['status']], alpha=0.5)
 
   patches = []
   for label in LABELS:
